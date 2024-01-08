@@ -1,0 +1,65 @@
+local autocmd = vim.api.nvim_create_autocmd
+
+-- Auto resize panes when resizing nvim window
+-- autocmd("VimResized", {
+--   pattern = "*",
+--   command = "tabdo wincmd =",
+-- })
+
+local function open_nvim_tree(data)
+
+  -- buffer is a directory
+  local directory = vim.fn.isdirectory(data.file) == 1
+
+  if not directory then
+    return
+  end
+
+  -- change to the directory
+  vim.cmd.cd(data.file)
+
+  -- open the tree
+  require("nvim-tree.api").tree.open()
+end
+
+autocmd({"VimEnter"}, { callback = open_nvim_tree })
+
+autocmd("BufWritePre", {
+  pattern = "*.go",
+  callback = function()
+    local params = vim.lsp.util.make_range_params()
+    params.context = {only = {"source.organizeImports"}}
+    -- buf_request_sync defaults to a 1000ms timeout. Depending on your
+    -- machine and codebase, you may want longer. Add an additional
+    -- argument after params if you find that you have to write the file
+    -- twice for changes to be saved.
+    -- E.g., vim.lsp.buf_request_sync(0, "textDocument/codeAction", params, 3000)
+    local result = vim.lsp.buf_request_sync(0, "textDocument/codeAction", params)
+    for cid, res in pairs(result or {}) do
+      for _, r in pairs(res.result or {}) do
+        if r.edit then
+          local enc = (vim.lsp.get_client_by_id(cid) or {}).offset_encoding or "utf-16"
+          vim.lsp.util.apply_workspace_edit(r.edit, enc)
+        end
+      end
+    end
+    vim.lsp.buf.format({async = false})
+  end
+})
+
+vim.opt.clipboard = "unnamedplus"
+vim.g.clipboard = {
+  name = "win32yank-wsl",
+  copy = {
+    ["+"] = "win32yank.exe -i --crlf",
+    ["*"] = "win32yank.exe -i --crlf",
+  },
+  paste = {
+    ["+"] = "win32yank.exe -o --lf",
+    ["*"] = "win32yank.exe -o --lf",
+  },
+  cache_enabled = 0,
+}
+
+
+vim.wo.relativenumber = true
