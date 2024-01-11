@@ -11,7 +11,8 @@ M.general = {
         require("conform").format()
       end,
       "formatting",
-    }
+    },
+    ["<leader>e"] = { ":Explore<CR>", "explorer"},
 
   },
   v = {
